@@ -1,0 +1,136 @@
+x-healthcheck-redis: &healthcheck-redis
+  healthcheck:
+    test: [ "CMD", "redis-cli", "ping" ]
+    interval: 10s
+    timeout: 3s
+    retries: 5
+    start_period: 5s
+services:
+  rabbitmq:
+    image: "rabbitmq:3.12.1-management-alpine"
+    environment:
+      RABBITMQ_DEFAULT_USER: recharge_queue
+      RABBITMQ_DEFAULT_PASS: 123456
+    ports:
+      - "15672:15672"
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+  user_redis:
+    <<: *healthcheck-redis
+    image: "redis:7.2"
+  user_postgres:
+    image: "postgres:15.3-alpine3.18"
+    environment:
+      POSTGRES_USER: user_writer
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: user
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "user_writer" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5433:5432"
+  user_service:
+    hostname: user-service
+    build:
+      context: .
+      args:
+        SERVICE_DIR: user_service
+    environment:
+      SERVER_PORT: 8080
+      JWT_SIGNING_KEY: tLrEudbKq+GFl5TNgGRg03GEF6jX04vXTqsvAcZ5/5A=
+      DB_URL: jdbc:postgresql://user_postgres:5432/user
+      DB_USERNAME: user_writer
+      DB_PASSWORD: 123456
+      REDIS_HOST: user_redis
+      REDIS_PORT: 6379
+    depends_on:
+      user_postgres:
+        condition: service_healthy
+      user_redis:
+        condition: service_healthy
+#    ports:
+#      - "8081:8080"
+  recharge_redis:
+    <<: *healthcheck-redis
+    image: "redis:7.2"
+  recharge_postgres:
+    image: "postgres:15.3-alpine3.18"
+    environment:
+      POSTGRES_USER: recharge_writer
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: recharge
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "recharge_writer" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5434:5432"
+  recharge_service:
+    hostname: recharge-service
+    build:
+      context: .
+      args:
+        SERVICE_DIR: recharge_service
+    environment:
+      SERVER_PORT: 8080
+      JWT_SIGNING_KEY: tLrEudbKq+GFl5TNgGRg03GEF6jX04vXTqsvAcZ5/5A=
+      DB_URL: jdbc:postgresql://recharge_postgres:5432/recharge
+      DB_USERNAME: recharge_writer
+      DB_PASSWORD: 123456
+      QUEUE_HOST: rabbitmq
+      QUEUE_PORT: 5672
+      QUEUE_USERNAME: recharge_queue
+      QUEUE_PASSWORD: 123456
+      REDIS_HOST: recharge_redis
+      REDIS_PORT: 6379
+      DMP_THIRD_PARTY_KEY: tLrEudbKq+GFl5TNgGRg03GEF6jX04vXTqsvAcZ5/5B=
+    depends_on:
+      recharge_postgres:
+        condition: service_healthy
+      recharge_redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+#    ports:
+#      - "8082:8080"
+  recharge_worker:
+    build:
+      context: .
+      args:
+        SERVICE_DIR: recharge_worker
+    environment:
+      SERVER_PORT: 8080
+      DB_URL: jdbc:postgresql://recharge_postgres:5432/recharge
+      DB_USERNAME: recharge_writer
+      DB_PASSWORD: 123456
+      QUEUE_HOST: rabbitmq
+      QUEUE_PORT: 5672
+      QUEUE_USERNAME: recharge_queue
+      QUEUE_PASSWORD: 123456
+    depends_on:
+      recharge_postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+#    ports:
+#      - "8083:8080"
+  api_gateway:
+    build:
+      context: .
+      args:
+        SERVICE_DIR: api_gateway
+    environment:
+      SERVER_PORT: 8080
+      JWT_SIGNING_KEY: tLrEudbKq+GFl5TNgGRg03GEF6jX04vXTqsvAcZ5/5A=
+      USER_SERVICE_URL: http://user-service:8080
+      RECHARGE_SERVICE_URL: http://recharge-service:8080
+    ports:
+      - "8080:8080"
+    restart: unless-stopped

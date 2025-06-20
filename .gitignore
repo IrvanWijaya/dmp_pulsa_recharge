@@ -1,0 +1,58 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+
+# Project-specific ignores
+/api_gateway/.idea/
+/api_gateway/target/
+/api_gateway/*.iml
+
+/recharge_service/.idea/
+/recharge_service/target/
+/recharge_service/*.iml
+
+/user_service/.idea/
+/user_service/target/
+/user_service/*.iml
+
+/recharge_worker/.idea/
+/recharge_worker/target/
+/recharge_worker/*.iml
+api_gateway/.gitignore
+api_gateway/.gitattributes
+recharge_service/.gitattributes
+recharge_worker/.gitattributes
+recharge_worker/.gitignore
+user_service/.gitattributes
+user_service/.gitignore

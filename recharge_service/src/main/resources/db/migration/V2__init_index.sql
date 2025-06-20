@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS unique_idx_recharge_requests_third_party_id ON recharge_requests(third_party_id);
